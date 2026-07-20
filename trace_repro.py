@@ -146,8 +146,16 @@ class Browser:
 
     def execute(self, action: dict[str, Any]) -> str:
         name = str(action.get("name", ""))
+        args = action.get("arguments", action)
+        if isinstance(args, str):
+            try:
+                args = json.loads(args)
+            except json.JSONDecodeError:
+                args = {}
+        if not isinstance(args, dict):
+            args = {}
         if name == "search":
-            query = str(action.get("query", ""))[:200]
+            query = str(args.get("query", ""))[:200]
             toks = re.findall(r"[a-z0-9]+", query.lower())
             scores = self.bm25.get_scores(toks) if toks else [0.0] * len(self.docs)
             self.results = sorted(range(len(self.docs)), key=lambda i: (-scores[i], i))[:5]
@@ -158,7 +166,7 @@ class Browser:
             return "SEARCH RESULTS\n" + "\n".join(lines)
         if name == "open":
             try:
-                local_id = int(action.get("id", -1))
+                local_id = int(args.get("id", -1))
                 self.current = self.results[local_id]
             except (ValueError, IndexError):
                 return "ERROR invalid result id"
@@ -166,7 +174,7 @@ class Browser:
         if name == "find":
             if self.current is None:
                 return "ERROR no open document"
-            pattern = str(action.get("pattern", ""))[:160]
+            pattern = str(args.get("pattern", ""))[:160]
             text = self.docs[self.current]["text"]
             pos = text.lower().find(pattern.lower())
             if pos < 0:
@@ -179,7 +187,7 @@ def parse_response(response: str) -> tuple[str, Any]:
     answers = re.findall(r"<answer>(.*?)</answer>", response, flags=re.I | re.S)
     if answers:
         return "answer", answers[-1].strip()
-    tools = re.findall(r"<tool>(.*?)</tool>", response, flags=re.I | re.S)
+    tools = re.findall(r"<(?:tool|tool_call)>(.*?)</(?:tool|tool_call)>", response, flags=re.I | re.S)
     if tools:
         try:
             return "tool", json.loads(tools[-1])
@@ -193,9 +201,15 @@ def build_prompt(question: str, transcript: str) -> str:
     return f"{SYSTEM}\n\nQUESTION: {question}\n{transcript}\nASSISTANT:"
 
 
+def chat_prompt(tokenizer, prompt: str) -> str:
+    return tokenizer.apply_chat_template(
+        [{"role": "user", "content": prompt}], tokenize=False, add_generation_prompt=True
+    )
+
+
 def generate(model, tokenizer, prompt: str, cfg: dict[str, Any], generator: torch.Generator) -> str:
     device = next(model.parameters()).device
-    batch = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=6144).to(device)
+    batch = tokenizer(chat_prompt(tokenizer, prompt), return_tensors="pt", truncation=True, max_length=6144).to(device)
     with torch.no_grad():
         out = model.generate(
             **batch,
@@ -272,7 +286,9 @@ def trace_credits(model, tokenizer, ro: Rollout, gold: str, cfg: dict[str, Any])
 
 def response_loss(model, tokenizer, segment: Segment, advantage: float) -> torch.Tensor:
     device = next(model.parameters()).device
-    prompt_ids = tokenizer(segment.prompt, add_special_tokens=True, truncation=True, max_length=6144)["input_ids"]
+    prompt_ids = tokenizer(
+        chat_prompt(tokenizer, segment.prompt), add_special_tokens=False, truncation=True, max_length=6144
+    )["input_ids"]
     response_ids = tokenizer(segment.response, add_special_tokens=False)["input_ids"] + [tokenizer.eos_token_id]
     # Bound training memory independently from rollout context length.
     if len(prompt_ids) + len(response_ids) > 4096:
