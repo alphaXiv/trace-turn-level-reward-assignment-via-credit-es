@@ -422,7 +422,9 @@ def main() -> None:
     rank = int(os.environ.get("LOCAL_RANK", "0"))
     world = int(os.environ.get("WORLD_SIZE", "1"))
     torch.cuda.set_device(rank)
-    dist.init_process_group("nccl", device_id=torch.device("cuda", rank))
+    # Replicas are independent; Gloo only coordinates a barrier and tiny JSON objects.
+    # All model work remains on the rank-local CUDA device.
+    dist.init_process_group("gloo")
     cfg = json.loads(Path("config.json").read_text())
     shared = Path("/tmp/trace_browsecomp_data.json")
     if rank == 0:
