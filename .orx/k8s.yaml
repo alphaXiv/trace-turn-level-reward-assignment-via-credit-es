@@ -10,7 +10,7 @@ spec:
       containers:
         - name: run
           image: pytorch/pytorch:2.7.1-cuda12.8-cudnn9-runtime
-          command: ["bash", "-c", "$ORX_SCRIPT"]
+          command: ["bash", "-c", "eval \"$ORX_SCRIPT\""]
           resources:
             requests:
               nvidia.com/gpu: "8"
