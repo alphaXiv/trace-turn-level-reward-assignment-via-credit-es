@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "paper_id": "2607.13988",
+  "source": "OpenResearch terminal FINAL_EVIDENCE_JSON blocks",
+  "fast_matched_pair": {
+    "model": "Qwen/Qwen3-4B-Instruct-2507",
+    "replicas": 8,
+    "gpus_per_method": 8,
+    "held_out_examples_per_replica": 8,
+    "outcome_only": {
+      "branch": "orx/outcome-only-rl",
+      "commit": "b18d8df",
+      "elapsed_seconds": 1027.444902648,
+      "curve": [
+        {"step": 0, "success_mean": 0.109375, "success_sd": 0.07493486749770796, "turns_mean": 2.515625},
+        {"step": 4, "success_mean": 0.109375, "success_sd": 0.09757809372497497, "turns_mean": 2.578125},
+        {"step": 8, "success_mean": 0.140625, "success_sd": 0.09757809372497497, "turns_mean": 2.734375},
+        {"step": 12, "success_mean": 0.140625, "success_sd": 0.04133986423538423, "turns_mean": 2.78125}
+      ],
+      "mean_between_rollout_learning_signal_variance": 0.30208200897897125
+    },
+    "trace": {
+      "branch": "orx/trace-rl",
+      "commit": "ac4d654",
+      "elapsed_seconds": 1515.110441928,
+      "curve": [
+        {"step": 0, "success_mean": 0.109375, "success_sd": 0.07493486749770796, "turns_mean": 2.515625},
+        {"step": 4, "success_mean": 0.078125, "success_sd": 0.086996318294363, "turns_mean": 2.203125},
+        {"step": 8, "success_mean": 0.0625, "success_sd": 0.0625, "turns_mean": 2.078125},
+        {"step": 12, "success_mean": 0.0625, "success_sd": 0.08838834764831845, "turns_mean": 2.65625}
+      ],
+      "mean_between_rollout_learning_signal_variance": 0.2201836684598186
+    }
+  }
+}

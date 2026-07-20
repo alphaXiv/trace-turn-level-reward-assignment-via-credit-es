@@ -68,7 +68,9 @@ Each Kubernetes job launches eight independent one-GPU replicas. Rank zero
 creates a deterministic split, and replicas use seeds 260713988 through
 260713995. A terminal JSON block includes every per-replica curve, the aggregate
 curve, the exact held-out query IDs, configuration, elapsed time, GPU model, and
-the predeclared variance metric.
+the predeclared variance metric. The plotted aggregate values are copied into
+[`results/evidence.json`](../../results/evidence.json), and the checked-in
+rendering script reads that file directly.
 
 ## Data and protocol
 
@@ -166,4 +168,3 @@ trainer, and multiple full-scale seeds. It should preserve the paired variance
 instrumentation introduced here, report confidence intervals over held-out
 questions and training seeds, and ablate the TRACE auxiliary weight and terminal
 fill separately.
-
