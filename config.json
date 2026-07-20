@@ -7,6 +7,7 @@
   "eval_examples": 8,
   "max_tool_turns": 4,
   "max_new_tokens": 4096,
+  "train_max_tokens": 2048,
   "group_size": 4,
   "training_steps": 12,
   "eval_every": 4,
