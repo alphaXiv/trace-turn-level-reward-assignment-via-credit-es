@@ -1,0 +1,23 @@
+{
+  "method": "baseline",
+  "model": "Qwen/Qwen3-4B-Thinking-2507",
+  "dataset_repo": "Tevatron/browsecomp-plus",
+  "dataset_file": "data/test-00000-of-00006.parquet",
+  "train_examples": 16,
+  "eval_examples": 8,
+  "max_tool_turns": 4,
+  "max_new_tokens": 144,
+  "group_size": 4,
+  "training_steps": 12,
+  "eval_every": 4,
+  "learning_rate": 0.00005,
+  "lora_rank": 16,
+  "temperature": 0.8,
+  "epsilon_train": 0.1,
+  "td_horizon": 3,
+  "td_gamma": 0.8,
+  "terminal_scale": 2.0,
+  "alpha_outcome": 1.0,
+  "alpha_turn": 0.2,
+  "base_seed": 260713988
+}

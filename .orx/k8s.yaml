@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: trace-{{ORX_RUN}}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: run
+          image: pytorch/pytorch:2.7.1-cuda12.8-cudnn9-runtime
+          command: ["bash", "-c", "$ORX_SCRIPT"]
+          resources:
+            requests:
+              nvidia.com/gpu: "8"
+              cpu: "96"
+              memory: 640Gi
+            limits:
+              nvidia.com/gpu: "8"
+              cpu: "120"
+              memory: 800Gi
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Gi
+        - name: hf-cache
+          emptyDir:
+            sizeLimit: 120Gi
