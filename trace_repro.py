@@ -43,6 +43,44 @@ At each turn output exactly one of:
 <tool>{\"name\":\"find\",\"pattern\":\"exact text\"}</tool>
 <answer>short final answer</answer>
 Search result ids are local to the latest search. Use evidence, not prior knowledge."""
+TOOL_SCHEMAS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search",
+            "description": "Search the fixed offline document corpus.",
+            "parameters": {
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "open",
+            "description": "Open one result from the latest search.",
+            "parameters": {
+                "type": "object",
+                "properties": {"id": {"type": "integer"}},
+                "required": ["id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "find",
+            "description": "Find exact text in the currently open document.",
+            "parameters": {
+                "type": "object",
+                "properties": {"pattern": {"type": "string"}},
+                "required": ["pattern"],
+            },
+        },
+    },
+]
 
 
 def now_iso() -> str:
@@ -203,7 +241,10 @@ def build_prompt(question: str, transcript: str) -> str:
 
 def chat_prompt(tokenizer, prompt: str) -> str:
     return tokenizer.apply_chat_template(
-        [{"role": "user", "content": prompt}], tokenize=False, add_generation_prompt=True
+        [{"role": "user", "content": prompt}],
+        tools=TOOL_SCHEMAS,
+        tokenize=False,
+        add_generation_prompt=True,
     )
 
 
