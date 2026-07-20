@@ -92,6 +92,7 @@ capped at 12,000 characters. Evaluation is normalized exact match.
 | Training / held-out questions | Full reported environment | 16 / 8 deterministic slice |
 | Search corpus | Full closed-web index | Query-local released gold + ≤32 hard negatives |
 | Policy update | GRPO | Group-relative REINFORCE with LoRA |
+| Differentiated sequence | Not separately bounded | Most recent 2,048 tokens; rollouts remain 4,096 tokens |
 | Replication | Paper reports single runs | 8 independent GPU replicas per method |
 
 These substitutions make the test feasible under the fixed compute deadline,
@@ -124,9 +125,12 @@ better held-out success in this run.
 
 ### Exact paper-checkpoint pair
 
-The exact `Qwen/Qwen3-4B-Thinking-2507` matched pair was launched concurrently
-on the same protocol. Its terminal measurements are incorporated into the final
-assessment and notebook after both jobs finish.
+The first exact TRACE attempt exposed a policy-loss memory bottleneck: backpropagating
+through a 4,096-token segment while materializing float32 logits over Qwen's
+151k-token vocabulary exhausted a 95 GB GPU. It produced no scientific
+checkpoint. The matched retry keeps 4,096-token generation and reference
+scoring but differentiates only through the most recent 2,048 tokens and uses
+fused cross-entropy. That identical change is applied to TRACE and outcome-only.
 
 ## Claim-by-claim assessment
 
@@ -157,8 +161,8 @@ Important branches:
 - [Outcome-only RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/outcome-only-rl)
 - [TRACE RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/trace-rl)
 - [Exact Qwen3-4B-Thinking baseline](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/paper-length-thinking-baseline)
-- [Exact-checkpoint outcome-only RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/thinking-outcome-only-rl)
-- [Exact-checkpoint TRACE RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/thinking-trace-rl)
+- [Memory-safe exact-checkpoint outcome-only RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/memory-safe-exact-outcome-only)
+- [Memory-safe exact-checkpoint TRACE RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/memory-safe-exact-trace)
 
 ## What a full-scale reproduction still needs
 

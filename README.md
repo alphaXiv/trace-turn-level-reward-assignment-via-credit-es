@@ -20,8 +20,10 @@ substitution directly; its terminal results are reported in the detailed report.
 The experiment is intentionally smaller than the paper: 16 training and 8
 held-out questions from one official BrowseComp-Plus shard, four tool turns,
 four rollouts per prompt, 12 RL updates, a query-local public offline corpus,
-LoRA, and group-relative REINFORCE rather than the reported full index, 60 turns,
-eight rollouts, 200 updates, and clipped GRPO. All formal runs used
+LoRA with a 2,048-token differentiated suffix, and group-relative REINFORCE
+rather than the reported full index, 60 turns, eight rollouts, 200 updates, and
+clipped GRPO. Rollout generation and reference scoring retain a 4,096-token
+budget. All formal runs used
 **OpenResearch Kubernetes** on **NVIDIA RTX PRO 6000 Blackwell** GPUs, reaching
 **16 concurrent GPUs**.
 
@@ -42,8 +44,8 @@ used the same entrypoint; only committed code/config differs between branches.
 | [Outcome-only RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/outcome-only-rl) | Matched terminal-reward control | `bash run.sh` | 14.06% final success; variance 0.3021 | Kubernetes, 8× Blackwell, 1,027 s model time |
 | [TRACE RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/trace-rl) | Add frozen-reference log-ratio TD rewards | `bash run.sh` | 6.25% final success; variance 0.2202 | Kubernetes, 8× Blackwell, 1,515 s model time |
 | [Exact Qwen3-4B-Thinking baseline](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/paper-length-thinking-baseline) | Restore the paper checkpoint and 4,096-token actions | `bash run.sh` | 10.94% held-out success | Kubernetes, 8× Blackwell, 1,210 s model time |
-| [Exact-checkpoint outcome-only RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/thinking-outcome-only-rl) | Matched exact-model control | `bash run.sh` | See report | Kubernetes, 8× Blackwell |
-| [Exact-checkpoint TRACE RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/thinking-trace-rl) | Exact model plus TRACE rewards | `bash run.sh` | See report | Kubernetes, 8× Blackwell |
+| [Memory-safe exact outcome-only RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/memory-safe-exact-outcome-only) | Exact-model control; 2,048-token differentiated suffix | `bash run.sh` | See report | Kubernetes, 8× Blackwell |
+| [Memory-safe exact TRACE RL](https://github.com/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/tree/orx/memory-safe-exact-trace) | Exact model plus TRACE; matched memory change | `bash run.sh` | See report | Kubernetes, 8× Blackwell |
 
 ## Reproduce the implementation
 
@@ -72,4 +74,3 @@ the notebook intentionally embeds the completed evidence and does not rerun the
 - `reports/trace-reproduction/images/` — figures rendered from terminal evidence
 - `notebooks/trace_reproduction.py` — self-contained marimo tutorial
 - `autoresearch.json` — machine-readable result and measured compute
-
