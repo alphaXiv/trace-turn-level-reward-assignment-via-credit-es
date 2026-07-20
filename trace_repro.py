@@ -325,19 +325,28 @@ def trace_credits(model, tokenizer, ro: Rollout, gold: str, cfg: dict[str, Any])
     return credits
 
 
-def response_loss(model, tokenizer, segment: Segment, advantage: float) -> torch.Tensor:
+def response_loss(
+    model, tokenizer, segment: Segment, advantage: float, train_max_tokens: int
+) -> torch.Tensor:
     device = next(model.parameters()).device
     prompt_ids = tokenizer(
         chat_prompt(tokenizer, segment.prompt), add_special_tokens=False, truncation=True, max_length=6144
     )["input_ids"]
     response_ids = tokenizer(segment.response, add_special_tokens=False)["input_ids"] + [tokenizer.eos_token_id]
-    # Bound training memory independently from rollout context length.
-    if len(prompt_ids) + len(response_ids) > 4096:
-        prompt_ids = prompt_ids[-(4096 - len(response_ids)) :]
-    ids = torch.tensor([prompt_ids + response_ids], device=device)
+    # Rollouts may use the paper-length 4096-token action budget, but LoRA
+    # backprop through that full sequence exceeds a 95 GiB GPU. Keep a suffix
+    # window for the policy loss so the terminal tool call and its immediately
+    # preceding reasoning remain trainable. If the prompt is entirely outside
+    # the window, the first retained response token is context only.
+    full_ids = prompt_ids + response_ids
+    train_max = int(train_max_tokens)
+    dropped = max(0, len(full_ids) - train_max)
+    kept_ids = full_ids[dropped:]
+    response_start = max(1, len(prompt_ids) - dropped)
+    ids = torch.tensor([kept_ids], device=device)
     logits = model(ids, use_cache=False).logits[:, :-1].float()
     targets = ids[:, 1:]
-    start = len(prompt_ids) - 1
+    start = response_start - 1
     lp = F.log_softmax(logits[:, start:], dim=-1).gather(-1, targets[:, start:].unsqueeze(-1)).mean()
     return -lp * float(advantage)
 
@@ -421,7 +430,9 @@ def train_replica(rank: int, cfg: dict[str, Any], data: dict[str, Any]) -> dict[
                 optimizer.zero_grad(set_to_none=True)
                 loss_value = 0.0
                 for seg, adv in work:
-                    part = response_loss(model, tokenizer, seg, adv) / len(work)
+                    part = response_loss(
+                        model, tokenizer, seg, adv, cfg["train_max_tokens"]
+                    ) / len(work)
                     loss_value += float(part.detach().item())
                     part.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
