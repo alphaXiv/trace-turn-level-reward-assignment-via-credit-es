@@ -1,14 +1,14 @@
 # TRACE turn-level credit: bounded claim reproduction
 
-![Measured held-out success curves and between-rollout variance for the matched fast pair](images/scout-results.png)
+![Measured held-out success curves and between-rollout variance for the exact-checkpoint matched pair](images/exact-results.png)
 
 **Assessment: partially reproduced.** On a public, closed-web BrowseComp-Plus
-slice, TRACE reduced the predeclared between-rollout learning-signal variance by
-27.1%, matching the proposed mechanism's direction. Under the same bounded
-schedule, however, it did not improve held-out success or produce earlier gains:
-the fast matched pair finished at 6.25% TRACE versus 14.06% outcome-only. This is
-a test of the downscaled reconstruction described below, not a verdict on the
-paper's full-scale result.
+slice, the exact-checkpoint pair did not show the reported task-level advantage:
+TRACE finished at 6.25% versus 9.38% outcome-only and its measured learning-signal
+variance was 140.3% higher. A faster matched scout also did not show the success
+advantage, but its TRACE signal variance was 27.1% lower. That single directional
+alignment makes the overall evidence partial and mixed. This is a test of the
+downscaled reconstruction below, not a verdict on the paper's full-scale result.
 
 [![Open in molab](https://marimo.io/molab-shield.svg)](https://molab.marimo.io/github/alphaXiv/trace-turn-level-reward-assignment-via-credit-es/blob/main/notebooks/trace_reproduction.py)
 
@@ -105,6 +105,8 @@ questions is coarse: one success per replica moves that replica by 12.5 points.
 
 ### Fast matched pair
 
+![Measured held-out success curves and between-rollout variance for the matched fast pair](images/scout-results.png)
+
 The Instruct scout pair shares its checkpoint, data, seeds, rollout budget,
 optimizer, evaluator, and schedule. Across 8 replicas × 8 held-out questions
 (64 sampled evaluations per checkpoint), the outcome-only control improved from
@@ -132,28 +134,47 @@ checkpoint. The matched retry keeps 4,096-token generation and reference
 scoring but differentiates only through the most recent 2,048 tokens and uses
 fused cross-entropy. That identical change is applied to TRACE and outcome-only.
 
+Across 8 replicas × 8 held-out questions, both methods rose from 10.94% to
+12.50% at update 4. Outcome-only remained at 12.50% at update 8 and ended at
+9.38%; TRACE fell to 6.25% at update 8 and remained there. Thus the exact pair
+showed neither an earlier TRACE gain nor a terminal success advantage.
+
+| Update | Outcome-only success | TRACE success | TRACE − control |
+|---:|---:|---:|---:|
+| 0 | 10.94% | 10.94% | 0.00 pp |
+| 4 | 12.50% | 12.50% | 0.00 pp |
+| 8 | 12.50% | 6.25% | −6.25 pp |
+| 12 | 9.38% | 6.25% | −3.13 pp |
+
+The same predeclared variance statistic was 0.1250 for outcome-only and 0.3003
+for TRACE, making TRACE 140.3% higher in this exact-checkpoint pair. Together
+with the scout's 27.1% reduction, the variance result is model-dependent and
+mixed under this reconstruction.
+
 ## Claim-by-claim assessment
 
-| Claim | Paper evidence | Observed evidence | Assessment |
-|---|---|---|---|
-| TRACE improves held-out closed-web search over outcome-only RL | 35.6% vs 30.0% on controlled Qwen3-4B (+5.6 pp) | Fast pair: 6.25% vs 14.06% (−7.81 pp) | **Inconclusive under this setup.** This run did not show the reported effect. |
-| TRACE produces earlier success gains | Paper training curve rises earlier | At updates 4 and 8, TRACE was 3.13 and 7.81 pp below the control | **Not aligned in the bounded fast pair.** |
-| TRACE lowers between-rollout reward variance | Mechanistic motivation; no directly comparable paper number | 0.2202 vs 0.3021, 27.1% lower | **Aligned in direction under the predeclared diagnostic.** |
+| Claim | Paper evidence | Observed evidence | Assessment | Compute cost |
+|---|---|---|---|---|
+| TRACE improves held-out closed-web search over outcome-only RL | 35.6% vs 30.0% on controlled Qwen3-4B (+5.6 pp) | Exact pair: 6.25% vs 9.38% (−3.13 pp); scout: 6.25% vs 14.06% (−7.81 pp) | **Inconclusive under this setup.** These runs did not show the reported effect. | Exact: 18,926 s TRACE / 18,507 s control; scout: 1,515 s / 1,027 s; each method used 8 Blackwell GPUs on Kubernetes |
+| TRACE produces earlier success gains | Paper training curve rises earlier | Exact: tied at update 4, then TRACE 6.25 pp lower at update 8; scout: TRACE 3.13 and 7.81 pp lower at updates 4 and 8 | **Not aligned in either bounded pair.** | Same paired runs above |
+| TRACE lowers between-rollout reward variance | Mechanistic motivation; no directly comparable paper number | Exact: 0.3003 vs 0.1250 (140.3% higher); scout: 0.2202 vs 0.3021 (27.1% lower) | **Mixed.** Scout aligned in direction; exact-checkpoint pair did not. | Same paired runs above |
 
 The mixed result warrants **partially reproduced**, rather than a broad negative
-conclusion. The variance mechanism appeared in a clean matched comparison, while
-the task-level benefit did not appear at this scale. Plausible explanations are
-the 12-update horizon, four-turn cap, small split, query-local retrieval corpus,
-and simplified group-relative update. TRACE's dense term may also require more
-rollout diversity or a longer schedule before its lower variance becomes useful.
+conclusion. The variance direction appeared in the clean Instruct scout but not
+the exact-checkpoint pair, while the task-level benefit appeared in neither.
+Plausible explanations are the 12-update horizon, four-turn cap, small split,
+query-local retrieval corpus, and simplified group-relative update. TRACE's
+dense term may also require more rollout diversity or a longer schedule.
 
 ## Compute and provenance
 
 Every formal measurement ran through OpenResearch Kubernetes on **NVIDIA RTX PRO
 6000 Blackwell** GPUs. Jobs used 8 GPUs each and the campaign reached **16 GPUs
 concurrently**. The exact entrypoint on every experiment branch was `bash run.sh`.
-Actual campaign wall time is recorded in `autoresearch.json` after the final
-terminal run.
+The measured campaign wall time was **7.383 hours**, from the first Kubernetes
+job start at 2026-07-20 14:22:46 UTC through the final completion at 21:45:44
+UTC. The exact pair itself used 8 GPUs per method and ran concurrently at the
+16-GPU peak.
 
 Important branches:
 

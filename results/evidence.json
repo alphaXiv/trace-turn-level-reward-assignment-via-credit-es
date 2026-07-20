@@ -31,5 +31,35 @@
       ],
       "mean_between_rollout_learning_signal_variance": 0.2201836684598186
     }
+  },
+  "exact_matched_pair": {
+    "model": "Qwen/Qwen3-4B-Thinking-2507",
+    "replicas": 8,
+    "gpus_per_method": 8,
+    "held_out_examples_per_replica": 8,
+    "outcome_only": {
+      "branch": "orx/memory-safe-exact-outcome-only",
+      "commit": "b054f4f",
+      "elapsed_seconds": 18507.272228920832,
+      "curve": [
+        {"step": 0, "success_mean": 0.109375, "success_sd": 0.1316585902058806, "turns_mean": 1.890625},
+        {"step": 4, "success_mean": 0.125, "success_sd": 0.0625, "turns_mean": 1.515625},
+        {"step": 8, "success_mean": 0.125, "success_sd": 0.125, "turns_mean": 1.6875},
+        {"step": 12, "success_mean": 0.09375, "success_sd": 0.08267972847076846, "turns_mean": 1.734375}
+      ],
+      "mean_between_rollout_learning_signal_variance": 0.12499944843498723
+    },
+    "trace": {
+      "branch": "orx/memory-safe-exact-trace",
+      "commit": "c6f04f3",
+      "elapsed_seconds": 18926.197277770843,
+      "curve": [
+        {"step": 0, "success_mean": 0.109375, "success_sd": 0.1316585902058806, "turns_mean": 1.890625},
+        {"step": 4, "success_mean": 0.125, "success_sd": 0.10825317547305482, "turns_mean": 1.6875},
+        {"step": 8, "success_mean": 0.0625, "success_sd": 0.08838834764831845, "turns_mean": 1.703125},
+        {"step": 12, "success_mean": 0.0625, "success_sd": 0.0625, "turns_mean": 1.671875}
+      ],
+      "mean_between_rollout_learning_signal_variance": 0.30032364081680774
+    }
   }
 }

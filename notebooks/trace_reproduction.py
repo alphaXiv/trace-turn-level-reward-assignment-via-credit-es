@@ -34,20 +34,30 @@ def _(mo):
 @app.cell
 def _():
     steps = [0, 4, 8, 12]
-    scout = {
-        "Outcome-only": [0.109375, 0.109375, 0.140625, 0.140625],
-        "TRACE": [0.109375, 0.078125, 0.0625, 0.0625],
+    pairs = {
+        "Exact Thinking checkpoint": {
+            "Outcome-only": [0.109375, 0.125, 0.125, 0.09375],
+            "TRACE": [0.109375, 0.125, 0.0625, 0.0625],
+        },
+        "Fast Instruct scout": {
+            "Outcome-only": [0.109375, 0.109375, 0.140625, 0.140625],
+            "TRACE": [0.109375, 0.078125, 0.0625, 0.0625],
+        },
     }
-    variances = {"Outcome-only": 0.30208200897897125, "TRACE": 0.2201836684598186}
-    return scout, steps, variances
+    variances = {
+        "Exact Thinking checkpoint": {"Outcome-only": 0.12499944843498723, "TRACE": 0.30032364081680774},
+        "Fast Instruct scout": {"Outcome-only": 0.30208200897897125, "TRACE": 0.2201836684598186},
+    }
+    return pairs, steps, variances
 
 
 @app.cell
-def _(alt, mo, pd, scout, steps, variances):
+def _(alt, mo, pairs, pd, steps, variances):
     rows = []
-    for method, curve in scout.items():
-        for step, success in zip(steps, curve):
-            rows.append({"method": method, "update": step, "success_percent": 100 * success})
+    for pair, methods in pairs.items():
+        for method, curve in methods.items():
+            for step, success in zip(steps, curve):
+                rows.append({"pair": pair, "method": method, "update": step, "success_percent": 100 * success})
     chart = mo.ui.altair_chart(
         alt.Chart(pd.DataFrame(rows))
         .mark_line(point=True, strokeWidth=3)
@@ -55,18 +65,22 @@ def _(alt, mo, pd, scout, steps, variances):
             x=alt.X("update:Q", title="RL update"),
             y=alt.Y("success_percent:Q", title="Held-out exact-match success (%)", scale=alt.Scale(domain=[0, 18])),
             color=alt.Color("method:N", title="Method"),
-            tooltip=["method", "update", "success_percent"],
+            column=alt.Column("pair:N", title=None),
+            tooltip=["pair", "method", "update", "success_percent"],
         )
-        .properties(height=320, title="Fast matched Qwen3-4B-Instruct pair (8 independent GPU replicas)")
+        .properties(width=300, height=300, title="Matched pairs (8 independent GPU replicas per method)")
     )
-    variance_drop = 100 * (1 - variances["TRACE"] / variances["Outcome-only"])
+    exact_change = 100 * (variances["Exact Thinking checkpoint"]["TRACE"] / variances["Exact Thinking checkpoint"]["Outcome-only"] - 1)
+    scout_drop = 100 * (1 - variances["Fast Instruct scout"]["TRACE"] / variances["Fast Instruct scout"]["Outcome-only"])
     mo.vstack([
         chart,
         mo.callout(
             mo.md(
-                f"""**Observed:** final success was **6.25% for TRACE** and
-                **14.06% for outcome-only**. TRACE's predeclared learning-signal
-                variance was **{variance_drop:.1f}% lower** (0.220 vs 0.302)."""
+                f"""**Observed:** on the exact checkpoint, final success was
+                **6.25% TRACE vs 9.38% outcome-only**, and TRACE variance was
+                **{exact_change:.1f}% higher** (0.300 vs 0.125). The scout also
+                lacked a success advantage, but TRACE variance was
+                **{scout_drop:.1f}% lower** (0.220 vs 0.302)."""
             ),
             kind="neutral",
         ),
@@ -143,14 +157,16 @@ def _(mo):
     ## Evidence boundary
 
     The paper reports **35.6% TRACE vs 30.0% GRPO** on its controlled
-    Qwen3-4B BrowseComp-Plus result. The fast matched reconstruction showed
-    **6.25% vs 14.06%** at update 12, so this bounded run did not show the
-    reported success advantage or earlier gains. It did show the expected
-    variance direction: **0.220 vs 0.302**, 27.1% lower.
+    Qwen3-4B BrowseComp-Plus result. The exact-checkpoint reconstruction showed
+    **6.25% vs 9.38%** at update 12, so this bounded run did not show the
+    reported success advantage or earlier gains. Its variance was **0.300 vs
+    0.125**, 140.3% higher. The fast scout also lacked a success advantage but
+    showed the opposite variance direction: **0.220 vs 0.302**, 27.1% lower.
 
     All formal measurements came from OpenResearch Kubernetes runs on
-    NVIDIA RTX PRO 6000 Blackwell GPUs. See the public report for exact-model
-    results, complete provenance, and the final claim-by-claim assessment.
+    NVIDIA RTX PRO 6000 Blackwell GPUs, with 16 GPUs concurrently and 7.383
+    hours of measured campaign wall time. See the public report for complete
+    provenance and the claim-by-claim assessment.
     """)
     return
 
