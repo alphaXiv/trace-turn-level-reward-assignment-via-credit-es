@@ -24,7 +24,6 @@ from pathlib import Path
 from typing import Any
 
 import torch
-import torch.distributed as dist
 import torch.nn.functional as F
 from huggingface_hub import hf_hub_download
 from peft import LoraConfig, get_peft_model
@@ -422,26 +421,39 @@ def main() -> None:
     rank = int(os.environ.get("LOCAL_RANK", "0"))
     world = int(os.environ.get("WORLD_SIZE", "1"))
     torch.cuda.set_device(rank)
-    dist.init_process_group("nccl", device_id=torch.device("cuda", rank))
     cfg = json.loads(Path("config.json").read_text())
     shared = Path("/tmp/trace_browsecomp_data.json")
     if rank == 0:
         print(f"RUN_START {now_iso()}", flush=True)
         print("CONFIG " + json.dumps(cfg, sort_keys=True), flush=True)
-        prepare_data(cfg, shared)
-    dist.barrier()
+        staged = shared.with_suffix(".tmp")
+        prepare_data(cfg, staged)
+        os.replace(staged, shared)
+    deadline = time.monotonic() + 900
+    while not shared.exists():
+        if time.monotonic() > deadline:
+            raise TimeoutError("Timed out waiting for rank-0 dataset preparation")
+        time.sleep(1)
     data = json.loads(shared.read_text())
     result = train_replica(rank, cfg, data)
-    gathered: list[Any] = [None] * world
-    dist.all_gather_object(gathered, result)
+    result_path = Path(f"/tmp/trace_result_{rank}.json")
+    staged_result = result_path.with_suffix(".tmp")
+    staged_result.write_text(json.dumps(result), encoding="utf-8")
+    os.replace(staged_result, result_path)
     if rank == 0:
+        result_paths = [Path(f"/tmp/trace_result_{i}.json") for i in range(world)]
+        deadline = time.monotonic() + 10800
+        while not all(path.exists() for path in result_paths):
+            if time.monotonic() > deadline:
+                missing = [str(path) for path in result_paths if not path.exists()]
+                raise TimeoutError(f"Timed out waiting for replica results: {missing}")
+            time.sleep(2)
+        gathered = [json.loads(path.read_text()) for path in result_paths]
         evidence = aggregate(gathered, cfg, time.monotonic() - start, data)
         print("FINAL_EVIDENCE_JSON_BEGIN", flush=True)
         print(json.dumps(evidence, sort_keys=True), flush=True)
         print("FINAL_EVIDENCE_JSON_END", flush=True)
         print(f"RUN_END {now_iso()}", flush=True)
-    dist.barrier()
-    dist.destroy_process_group()
 
 
 if __name__ == "__main__":
