@@ -344,11 +344,17 @@ def response_loss(
     kept_ids = full_ids[dropped:]
     response_start = max(1, len(prompt_ids) - dropped)
     ids = torch.tensor([kept_ids], device=device)
-    logits = model(ids, use_cache=False).logits[:, :-1].float()
+    logits = model(ids, use_cache=False).logits[:, response_start - 1 : -1]
     targets = ids[:, 1:]
     start = response_start - 1
-    lp = F.log_softmax(logits[:, start:], dim=-1).gather(-1, targets[:, start:].unsqueeze(-1)).mean()
-    return -lp * float(advantage)
+    # Fused CE avoids materializing a float32 log-softmax over Qwen's 151k
+    # vocabulary, the immediate cause of the 4096-token retry's OOM.
+    nll = F.cross_entropy(
+        logits.reshape(-1, logits.shape[-1]),
+        targets[:, start:].reshape(-1),
+        reduction="mean",
+    )
+    return nll * float(advantage)
 
 
 def group_advantages(outcomes: list[float]) -> list[float]:
