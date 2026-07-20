@@ -1,6 +1,6 @@
 {
   "method": "baseline",
-  "model": "Qwen/Qwen3-4B-Thinking-2507",
+  "model": "Qwen/Qwen3-4B-Instruct-2507",
   "dataset_repo": "Tevatron/browsecomp-plus",
   "dataset_file": "data/test-00000-of-00006.parquet",
   "train_examples": 16,
