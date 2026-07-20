@@ -421,7 +421,8 @@ def main() -> None:
     start = time.monotonic()
     rank = int(os.environ.get("LOCAL_RANK", "0"))
     world = int(os.environ.get("WORLD_SIZE", "1"))
-    dist.init_process_group("nccl")
+    torch.cuda.set_device(rank)
+    dist.init_process_group("nccl", device_id=torch.device("cuda", rank))
     cfg = json.loads(Path("config.json").read_text())
     shared = Path("/tmp/trace_browsecomp_data.json")
     if rank == 0:
