@@ -6,9 +6,11 @@ app = marimo.App(width="medium")
 
 @app.cell
 def _():
+    import altair as alt
     import marimo as mo
+    import pandas as pd
 
-    return (mo,)
+    return alt, mo, pd
 
 
 @app.cell
@@ -41,18 +43,18 @@ def _():
 
 
 @app.cell
-def _(mo, scout, steps, variances):
+def _(alt, mo, pd, scout, steps, variances):
     rows = []
     for method, curve in scout.items():
         for step, success in zip(steps, curve):
             rows.append({"method": method, "update": step, "success_percent": 100 * success})
     chart = mo.ui.altair_chart(
-        __import__("altair").Chart(__import__("pandas").DataFrame(rows))
+        alt.Chart(pd.DataFrame(rows))
         .mark_line(point=True, strokeWidth=3)
         .encode(
-            x=__import__("altair").X("update:Q", title="RL update"),
-            y=__import__("altair").Y("success_percent:Q", title="Held-out exact-match success (%)", scale=__import__("altair").Scale(domain=[0, 18])),
-            color=__import__("altair").Color("method:N", title="Method"),
+            x=alt.X("update:Q", title="RL update"),
+            y=alt.Y("success_percent:Q", title="Held-out exact-match success (%)", scale=alt.Scale(domain=[0, 18])),
+            color=alt.Color("method:N", title="Method"),
             tooltip=["method", "update", "success_percent"],
         )
         .properties(height=320, title="Fast matched Qwen3-4B-Instruct pair (8 independent GPU replicas)")
